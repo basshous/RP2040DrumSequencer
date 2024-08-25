@@ -222,3 +222,6 @@ while True:
                 light_steps(i, sequence[curr_drum][i])
             display.print(drum_names[curr_drum])
         last_encoder_pos = encoder_pos
+
+ # suppresions:
+ # type: ignore
