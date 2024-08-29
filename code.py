@@ -17,7 +17,7 @@ import usb_midi
 from adafruit_seesaw import seesaw, rotaryio, digitalio
 from adafruit_debouncer import Debouncer
 from adafruit_ht16k33 import segments
-
+from bitarray import bitarray
 
 # define I2C
 i2c = board.STEMMA_I2C()
@@ -89,17 +89,17 @@ drum_notes = [36, 38, 41, 43, 45, 37, 39, 56, 49, 46, 42]  # general midi drum n
 
 # default starting sequence needs to match number of drums in num_drums
 sequence = [
-    [ 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 1, 0,  0, 0, 0, 0 ], # bass drum
-    [ 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ], # snare
-    [ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ], # low tom
-    [ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 0 ], # mid tom
-    [ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1 ], # high tom
-    [ 0, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ], # rimshot/claves
-    [ 0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 0 ], # handclap/maracas
-    [ 0, 0, 0, 0,  0, 1, 0, 1,  1, 0, 1, 0,  0, 0, 0, 0 ], # cowbell
-    [ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ], # cymbal
-    [ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0 ], # hihat open
-    [ 0, 0, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1,  0, 0, 1, 0 ]  # hihat closed
+    bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 1, 0,  0, 0, 0, 0 ]), # bass drum
+    bitarray([ 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ]), # snare
+    bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ]), # low tom
+    bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 0 ]), # mid tom
+    bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1 ]), # high tom
+    bitarray([ 0, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ]), # rimshot/claves
+    bitarray([ 0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 0 ]), # handclap/maracas
+    bitarray([ 0, 0, 0, 0,  0, 1, 0, 1,  1, 0, 1, 0,  0, 0, 0, 0 ]), # cowbell
+    bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ]), # cymbal
+    bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0 ]), # hihat open
+    bitarray([ 0, 0, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1,  0, 0, 1, 0 ])  # hihat closed
 ]
 
 def play_drum(note):
@@ -131,7 +131,7 @@ def edit_mode_toggle():
 def print_sequence():
     print("sequence = [ ")
     for k in range(num_drums):
-        print(" [" + ",".join('1' if e else '0' for e in sequence[k]) + "], #", drum_names[k])
+        print(" " + repr(sequence[k]) + ", #", drum_names[k])
     print("]")
 
 # set the leds
@@ -202,7 +202,7 @@ while True:
     if switch:
         if switch.pressed:
             i = switch.key_number
-            sequence[curr_drum][i] = not sequence[curr_drum][i]  # toggle step
+            sequence[curr_drum].toggle(i) # toggle step
             light_steps(i, sequence[curr_drum][i])  # toggle light
 
     if encoder_pos != last_encoder_pos:
