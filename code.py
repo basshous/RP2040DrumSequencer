@@ -18,6 +18,8 @@ from adafruit_seesaw import seesaw, rotaryio, digitalio
 from adafruit_debouncer import Debouncer
 from adafruit_ht16k33 import segments
 from bitarray import bitarray
+import struct
+import microcontroller
 
 # define I2C
 i2c = board.STEMMA_I2C()
@@ -135,6 +137,61 @@ def print_sequence():
         print(" " + repr(sequence[k]) + ", #", drum_names[k])
     print("]")
 
+# format of the header in NVM for save_state/load_state:
+# < -- little-endian; lower bits are more significant
+# B -- magic number
+# B -- number of drums (unsigned byte: 0 - 255)
+# B -- number of steps (unsigned byte: 0 - 255)
+# H -- BPM beats per minute (unsigned short: 0 - 65536)
+
+# this number should change if load/save logic changes in
+# and incompatible way
+magic_number = 0x01
+nvm_header_formatstring = b'<BBBH'
+header_size = struct.calcsize(nvm_header_formatstring)
+
+def save_state() -> None:
+    length = header_size
+    for seq in sequence:
+        length += seq.bytelen()
+    bytes = bytearray(length)
+    struct.pack_into(
+        nvm_header_formatstring,
+        bytes,
+        magic_number,
+        num_drums,
+        num_steps,
+        bpm)
+    index = header_size
+    for seq in sequence:
+        seq.save(bytes, index)
+        index += seq.bytelen()
+    # in one update, write the saved bytes
+    # to nonvolatile memory
+    microcontroller.nvm[0:length] = bytes
+
+def load_state() -> None:
+    header = struct.unpack_from(nvm_header_formatstring, microcontroller.nvm[0:header_size])
+    if header[0] != magic_number or header[1] == 0 or header[2] == 0 or header[3] == 0:
+        return
+    num_drums = header[1]
+    num_steps = header[2]
+    sequence = [bitarray(num_steps) for _ in range(num_drums)]
+    index = header_size
+    for seq in sequence:
+        seq.load(microcontroller.nvm[index:index+seq.bytelen()])
+        index += seq.bytelen()
+
+    # TODO: This steps_millis calculation should be in a function (or a class)
+    global bpm, steps_millis
+    bpm = header[3]
+    beat_time = 60/bpm  # time length of a single beat
+    beat_millis = beat_time * 1000
+    steps_millis = beat_millis / steps_per_beat
+
+# try to load the state (no-op if NVM not valid)
+load_state()
+
 # set the leds
 for j in range(sequence_length):
     light_steps(j, sequence[curr_drum][j])
@@ -170,6 +227,7 @@ while True:
     if start_button.fell:  # pushed encoder button plays/stops transport
         if playing is True:
             print_sequence()
+            save_state()
         playing = not playing
         step_counter = 0
         last_step = int(ticks_add(ticks_ms(), -steps_millis))
