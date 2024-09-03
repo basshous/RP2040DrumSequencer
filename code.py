@@ -26,6 +26,7 @@ num_steps = 16  # number of steps/switches
 num_drums = 11  # primary 808 drums used here, but you can use however many you like
 # Beat timing assumes 4/4 time signature, e.g. 4 beats per measure, 1/4 note gets the beat
 bpm = 120  # default BPM
+# TODO: This steps_millis calculation should be in a function (or a class)
 beat_time = 60/bpm  # time length of a single beat
 beat_millis = beat_time * 1000  # time length of single beat in milliseconds
 steps_per_beat = 4  # subdivide beats down to to 16th notes
@@ -210,6 +211,7 @@ while True:
         if edit_mode == 0:
             bpm = bpm + encoder_delta  # or (encoder_delta * 5)
             bpm = min(max(bpm, 10), 400)
+            # TODO: This steps_millis calculation should be in a function (or a class)
             beat_time = 60/bpm  # time length of a single beat
             beat_millis = beat_time * 1000
             steps_millis = beat_millis / steps_per_beat
