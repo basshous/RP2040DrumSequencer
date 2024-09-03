@@ -148,23 +148,21 @@ def print_sequence():
 # this number should change if load/save logic changes in
 # and incompatible way
 magic_number = 0x01
-nvm_header_formatstring = b'<BBBH'
-header_size = struct.calcsize(nvm_header_formatstring)
+nvm_header = struct.Struct(b'<BBBH')
 
 def save_state() -> None:
-    length = header_size
+    length = nvm_header.size
     for seq in sequence:
         length += seq.bytelen()
     bytes = bytearray(length)
-    struct.pack_into(
-        nvm_header_formatstring,
+    nvm_header.pack_into(
         bytes,
         0,
         magic_number,
         num_drums,
         num_steps,
         bpm)
-    index = header_size
+    index = nvm_header.size
     for seq in sequence:
         seq.save(bytes, index)
         index += seq.bytelen()
@@ -173,13 +171,13 @@ def save_state() -> None:
     microcontroller.nvm[0:length] = bytes
 
 def load_state() -> None:
-    header = struct.unpack_from(nvm_header_formatstring, microcontroller.nvm[0:header_size])
+    header = nvm_header.unpack_from(microcontroller.nvm[0:nvm_header.size])
     if header[0] != magic_number or header[1] == 0 or header[2] == 0 or header[3] == 0:
         return
     num_drums = header[1]
     num_steps = header[2]
     sequence = [bitarray(num_steps) for _ in range(num_drums)]
-    index = header_size
+    index = nvm_header.size
     for seq in sequence:
         seq.load(microcontroller.nvm[index:index+seq.bytelen()])
         index += seq.bytelen()
