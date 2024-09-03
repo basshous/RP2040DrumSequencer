@@ -22,6 +22,15 @@ from bitarray import bitarray
 import struct
 import microcontroller
 
+class drum:
+    def __init__(self, name, note, sequence):
+        self.name = name
+        self.note = note
+        self.sequence = sequence
+    
+    def __repr__(self):
+        return f'drum({repr(self.name)},{repr(self.note)},{repr(self.sequence)})'
+
 def set_bpm(newbpm: int):
     global bpm, steps_millis
     bpm = newbpm
@@ -87,25 +96,19 @@ encoder_pos = -encoder.position
 # MIDI setup
 midi = usb_midi.ports[1]
 
-drum_names = [
-                "Bass", "Snar", "LTom", "MTom", "HTom",
-                "Clav", "Clap", "Cowb", "Cymb", "OHat", "CHat"
-]
-drum_notes = [36, 38, 41, 43, 45, 37, 39, 56, 49, 46, 42]  # general midi drum notes matched to 808
-
 # default starting sequence needs to match number of drums in num_drums
-sequence = [
-    bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 1, 0,  0, 0, 0, 0 ]), # bass drum
-    bitarray([ 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ]), # snare
-    bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ]), # low tom
-    bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 0 ]), # mid tom
-    bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1 ]), # high tom
-    bitarray([ 0, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ]), # rimshot/claves
-    bitarray([ 0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 0 ]), # handclap/maracas
-    bitarray([ 0, 0, 0, 0,  0, 1, 0, 1,  1, 0, 1, 0,  0, 0, 0, 0 ]), # cowbell
-    bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ]), # cymbal
-    bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0 ]), # hihat open
-    bitarray([ 0, 0, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1,  0, 0, 1, 0 ])  # hihat closed
+drums = [
+    drum("Bass", 36, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 1, 0,  0, 0, 0, 0 ])),
+    drum("Snar", 38, bitarray([ 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ])),
+    drum("LTom", 41, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ])),
+    drum("MTom", 43, bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 0 ])),
+    drum("HTom", 45, bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1 ])),
+    drum("Clav", 37, bitarray([ 0, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ])),
+    drum("Clap", 39, bitarray([ 0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 0 ])),
+    drum("Cowb", 56, bitarray([ 0, 0, 0, 0,  0, 1, 0, 1,  1, 0, 1, 0,  0, 0, 0, 0 ])),
+    drum("Cymb", 49, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ])),
+    drum("OHat", 46, bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0 ])),
+    drum("CHat", 42, bitarray([ 0, 0, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1,  0, 0, 1, 0 ])),
 ]
 
 def play_drum(note):
@@ -132,12 +135,12 @@ def edit_mode_toggle():
     if edit_mode == 0:
         display.print(bpm)
     elif edit_mode == 1:
-        display.print(drum_names[curr_drum])
+        display.print(drums[curr_drum].name)
 
 def print_sequence():
-    print("sequence = [ ")
+    print("drums = [ ")
     for k in range(num_drums):
-        print(" " + repr(sequence[k]) + ", #", drum_names[k])
+        print(" " + repr(drums[k]) + ",")
     print("]")
 
 # format of the header in NVM for save_state/load_state:
@@ -149,9 +152,9 @@ def print_sequence():
 
 # this number should change if load/save logic changes in
 # and incompatible way
-magic_number = 0x01
+magic_number = 0x02
 class nvm_header:
-    format = b'<BBBH'
+    format = b'<BBH'
     size = struct.calcsize(format)
     def pack_into(buffer, offset, *v):
         struct.pack_into(nvm_header.format, buffer, offset, *v)
@@ -160,35 +163,33 @@ class nvm_header:
 
 def save_state() -> None:
     length = nvm_header.size
-    for seq in sequence:
-        length += seq.bytelen()
+    for drum in drums:
+        length += drum.sequence.bytelen()
     bytes = bytearray(length)
     nvm_header.pack_into(
         bytes,
         0,
         magic_number,
-        num_drums,
         num_steps,
         bpm)
     index = nvm_header.size
-    for seq in sequence:
-        seq.save(bytes, index)
-        index += seq.bytelen()
+    for drum in drums:
+        drum.sequence.save(bytes, index)
+        index += drum.sequence.bytelen()
     # in one update, write the saved bytes
     # to nonvolatile memory
     microcontroller.nvm[0:length] = bytes
 
 def load_state() -> None:
-    global bpm, steps_millis, sequence
+    global bpm, steps_millis
     header = nvm_header.unpack_from(microcontroller.nvm[0:nvm_header.size])
-    if header[0] != magic_number or header[1] == 0 or header[2] == 0 or header[3] == 0:
+    if header[0] != magic_number or header[1] == 0 or header[2] == 0:
         return
-    num_drums = header[1]
-    num_steps = header[2]
-    newbpm = header[3]
-    sequence = [bitarray(num_steps) for _ in range(num_drums)]
+    num_steps = header[1]
+    newbpm = header[2]
     index = nvm_header.size
-    for seq in sequence:
+    for drum in drums:
+        seq = drum.sequence
         seq.load(microcontroller.nvm[index:index+seq.bytelen()])
         index += seq.bytelen()
     set_bpm(newbpm)
@@ -198,7 +199,7 @@ load_state()
 
 # set the leds
 for j in range(num_steps):
-    light_steps(j, sequence[curr_drum][j])
+    light_steps(j, drums[curr_drum].sequence[j])
 
 display = segments.Seg14x4(i2c, address=(0x71))
 display.brightness = 0.3
@@ -246,9 +247,9 @@ while True:
 
             light_beat(step_counter)  # brighten current step
             for i in range(num_drums):
-                if sequence[i][step_counter]:  # if there's a 1 at the step for the seq, play it
-                    play_drum(drum_notes[i])
-            light_steps(step_counter, sequence[curr_drum][step_counter])  # return led to step value
+                if drums[i].sequence[step_counter]:  # if there's a 1 at the step for the seq, play it
+                    play_drum(drums[i].note)
+            light_steps(step_counter, drums[curr_drum].sequence[step_counter])  # return led to step value
             step_counter = (step_counter + 1) % num_steps
             encoder_pos = -encoder.position  # only check encoder while playing between steps
             knobbutton.update()
@@ -265,8 +266,8 @@ while True:
     if switch:
         if switch.pressed:
             i = switch.key_number
-            sequence[curr_drum].toggle(i) # toggle step
-            light_steps(i, sequence[curr_drum][i])  # toggle light
+            drums[curr_drum].sequence.toggle(i) # toggle step
+            light_steps(i, drums[curr_drum].sequence[i])  # toggle light
 
     if encoder_pos != last_encoder_pos:
         encoder_delta = encoder_pos - last_encoder_pos
@@ -280,8 +281,8 @@ while True:
             curr_drum = (curr_drum + encoder_delta) % num_drums
             # quickly set the step leds
             for i in range(num_steps):
-                light_steps(i, sequence[curr_drum][i])
-            display.print(drum_names[curr_drum])
+                light_steps(i, drums[curr_drum].sequence[i])
+            display.print(drums[curr_drum].name)
         last_encoder_pos = encoder_pos
 
  # suppresions:
