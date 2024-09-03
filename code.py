@@ -148,7 +148,13 @@ def print_sequence():
 # this number should change if load/save logic changes in
 # and incompatible way
 magic_number = 0x01
-nvm_header = struct.Struct(b'<BBBH')
+class nvm_header:
+    format = b'<BBBH'
+    size = struct.calcsize(format)
+    def pack_into(buffer, offset, *v):
+        struct.pack_into(nvm_header.format, buffer, offset, *v)
+    def unpack_from(buffer, offset = 0):
+        return struct.unpack_from(nvm_header.format, buffer, offset)
 
 def save_state() -> None:
     length = nvm_header.size
