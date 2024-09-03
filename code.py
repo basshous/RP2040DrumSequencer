@@ -159,6 +159,7 @@ def save_state() -> None:
     struct.pack_into(
         nvm_header_formatstring,
         bytes,
+        0,
         magic_number,
         num_drums,
         num_steps,
