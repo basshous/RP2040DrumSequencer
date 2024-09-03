@@ -42,7 +42,6 @@ def set_bpm(newbpm: int):
 i2c = board.STEMMA_I2C()
 
 num_steps = 16  # number of steps/switches
-num_drums = 11  # primary 808 drums used here, but you can use however many you like
 steps_per_beat = 4  # subdivide beats down to to 16th notes
 # Beat timing assumes 4/4 time signature, e.g. 4 beats per measure, 1/4 note gets the beat
 set_bpm(120)
@@ -96,7 +95,7 @@ encoder_pos = -encoder.position
 # MIDI setup
 midi = usb_midi.ports[1]
 
-# default starting sequence needs to match number of drums in num_drums
+# default starting sequence
 drums = [
     drum("Bass", 36, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 1, 0,  0, 0, 0, 0 ])),
     drum("Snar", 38, bitarray([ 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ])),
@@ -139,8 +138,8 @@ def edit_mode_toggle():
 
 def print_sequence():
     print("drums = [ ")
-    for k in range(num_drums):
-        print(" " + repr(drums[k]) + ",")
+    for drum in drums:
+        print(" " + repr(drum) + ",")
     print("]")
 
 # format of the header in NVM for save_state/load_state:
@@ -246,9 +245,9 @@ while True:
             last_step = ticks_add(now, - late_time//2)
 
             light_beat(step_counter)  # brighten current step
-            for i in range(num_drums):
-                if drums[i].sequence[step_counter]:  # if there's a 1 at the step for the seq, play it
-                    play_drum(drums[i].note)
+            for drum in drums:
+                if drum.sequence[step_counter]:  # if there's a 1 at the step for the seq, play it
+                    play_drum(drums.note)
             light_steps(step_counter, drums[curr_drum].sequence[step_counter])  # return led to step value
             step_counter = (step_counter + 1) % num_steps
             encoder_pos = -encoder.position  # only check encoder while playing between steps
@@ -278,7 +277,7 @@ while True:
             display.fill(0)
             display.print(bpm)
         if edit_mode == 1:
-            curr_drum = (curr_drum + encoder_delta) % num_drums
+            curr_drum = (curr_drum + encoder_delta) % len(drums)
             # quickly set the step leds
             for i in range(num_steps):
                 light_steps(i, drums[curr_drum].sequence[i])
