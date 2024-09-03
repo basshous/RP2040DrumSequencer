@@ -39,7 +39,6 @@ steps_per_beat = 4  # subdivide beats down to to 16th notes
 set_bpm(120)
 
 step_counter = 0  # goes from 0 to length of sequence - 1
-sequence_length = 16  # how many notes stored in a sequence
 curr_drum = 0
 playing = False
 
@@ -198,7 +197,7 @@ def load_state() -> None:
 load_state()
 
 # set the leds
-for j in range(sequence_length):
+for j in range(num_steps):
     light_steps(j, sequence[curr_drum][j])
 
 display = segments.Seg14x4(i2c, address=(0x71))
@@ -250,7 +249,7 @@ while True:
                 if sequence[i][step_counter]:  # if there's a 1 at the step for the seq, play it
                     play_drum(drum_notes[i])
             light_steps(step_counter, sequence[curr_drum][step_counter])  # return led to step value
-            step_counter = (step_counter + 1) % sequence_length
+            step_counter = (step_counter + 1) % num_steps
             encoder_pos = -encoder.position  # only check encoder while playing between steps
             knobbutton.update()
             if knobbutton.fell:
@@ -280,7 +279,7 @@ while True:
         if edit_mode == 1:
             curr_drum = (curr_drum + encoder_delta) % num_drums
             # quickly set the step leds
-            for i in range(sequence_length):
+            for i in range(num_steps):
                 light_steps(i, sequence[curr_drum][i])
             display.print(drum_names[curr_drum])
         last_encoder_pos = encoder_pos
