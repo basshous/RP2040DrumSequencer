@@ -22,18 +22,21 @@ from bitarray import bitarray
 import struct
 import microcontroller
 
+def set_bpm(newbpm: int):
+    global bpm, steps_millis
+    bpm = newbpm
+    beat_time = 60/bpm  # time length of a single beat
+    beat_millis = beat_time * 1000
+    steps_millis = beat_millis / steps_per_beat
+
 # define I2C
 i2c = board.STEMMA_I2C()
 
 num_steps = 16  # number of steps/switches
 num_drums = 11  # primary 808 drums used here, but you can use however many you like
-# Beat timing assumes 4/4 time signature, e.g. 4 beats per measure, 1/4 note gets the beat
-bpm = 120  # default BPM
-# TODO: This steps_millis calculation should be in a function (or a class)
-beat_time = 60/bpm  # time length of a single beat
-beat_millis = beat_time * 1000  # time length of single beat in milliseconds
 steps_per_beat = 4  # subdivide beats down to to 16th notes
-steps_millis = beat_millis / steps_per_beat  # time length of a beat subdivision, e.g. 1/16th note
+# Beat timing assumes 4/4 time signature, e.g. 4 beats per measure, 1/4 note gets the beat
+set_bpm(120)
 
 step_counter = 0  # goes from 0 to length of sequence - 1
 sequence_length = 16  # how many notes stored in a sequence
@@ -183,17 +186,13 @@ def load_state() -> None:
         return
     num_drums = header[1]
     num_steps = header[2]
+    newbpm = header[3]
     sequence = [bitarray(num_steps) for _ in range(num_drums)]
     index = nvm_header.size
     for seq in sequence:
         seq.load(microcontroller.nvm[index:index+seq.bytelen()])
         index += seq.bytelen()
-
-    # TODO: This steps_millis calculation should be in a function (or a class)
-    bpm = header[3]
-    beat_time = 60/bpm  # time length of a single beat
-    beat_millis = beat_time * 1000
-    steps_millis = beat_millis / steps_per_beat
+    set_bpm(newbpm)
 
 # try to load the state (no-op if NVM not valid)
 load_state()
@@ -273,12 +272,9 @@ while True:
     if encoder_pos != last_encoder_pos:
         encoder_delta = encoder_pos - last_encoder_pos
         if edit_mode == 0:
-            bpm = bpm + encoder_delta  # or (encoder_delta * 5)
-            bpm = min(max(bpm, 10), 400)
-            # TODO: This steps_millis calculation should be in a function (or a class)
-            beat_time = 60/bpm  # time length of a single beat
-            beat_millis = beat_time * 1000
-            steps_millis = beat_millis / steps_per_beat
+            newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
+            newbpm = min(max(newbpm, 10), 400)
+            set_bpm(newbpm)
             display.fill(0)
             display.print(bpm)
         if edit_mode == 1:
