@@ -106,8 +106,7 @@ class bitarray(object):
         """
         if start + self.bytelen() > len(data):
             raise IndexError()
-        for i in range(len(self._bytes)):
-            data[start + i] = self._bytes[i]
+        data[start:start+self.bytelen()] = self._bytes
 
     def load(self, data: bytearray, start: int = 0) -> None:
         """
@@ -117,5 +116,4 @@ class bitarray(object):
         """
         if start + self.bytelen() > len(data):
             raise IndexError()
-        for i in range(len(self._bytes)):
-            self._bytes[i] = data[start + i]
+        self._bytes = data[start:start+self.bytelen()]
