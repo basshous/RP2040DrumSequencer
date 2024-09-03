@@ -1,4 +1,8 @@
 class bitarray(object):
+    """
+    A bitarray is logically an array of bool values stored
+    as a bytearray
+    """
     def __init__(self, data):
         if isinstance(data, int):
             # round up
@@ -6,9 +10,17 @@ class bitarray(object):
             self._bytes = bytearray(bytecount)
             self._bitscount = data
         else:
+            # recursively call __init__
+            # to set up something with
+            # the right number of
+            # bits
             self.__init__(len(data))
 
             dataiter = iter(data)
+            # unroll to decode a byte at
+            # a time. When we get to the end of
+            # the enumeration, we'll skip the
+            # rest with the StopIteration exception
             for byteindex in range(len(self._bytes)):
                 byte = 0
                 try:
@@ -31,15 +43,25 @@ class bitarray(object):
                 except StopIteration:
                     break
                 finally:
+                    # actaully assign the byte whether
+                    # we are breaking out of the loop or
+                    # not
                     self._bytes[byteindex] = byte
 
     def __len__(self) -> int:
+        """returns the number of bools in the bitarray"""
         return self._bitscount
 
     def __repr__(self) -> str:
+        """gives code which will create an equivalent bitarray"""
         return f'bitarray(({','.join(['1' if self[i] else '0' for i in range(len(self))])}))'
 
     def __getindexandmask(self, index):
+        """
+        helper function to get the index of the byte in
+        the bytearray for a given bit. It also gives the
+        bitmask to select the bit within that byte
+        """
         if index < 0 or index >= self._bitscount:
             raise IndexError()
         byteindex = index // 8
@@ -47,10 +69,20 @@ class bitarray(object):
         return (byteindex, bitmask)
 
     def __getitem__(self, index: int) -> bool:
+        """ supports the self[index] syntax to read a bit
+
+        Returns True if the bit is set; False otherwise
+        """
         byteindex, bitmask = self.__getindexandmask(index)
         return self._bytes[byteindex] & bitmask != 0
 
+    # this is the function to set the value of
+    # self[index]
     def __setitem__(self, index: int, value: bool) -> None:
+        """ supports the self[index] syntax to set a bit
+
+        Sets the bit if the value is True; clears it otherwise.
+        """
         byteindex, bitmask = self.__getindexandmask(index)
         if value:
             self._bytes[byteindex] |= bitmask
@@ -58,16 +90,27 @@ class bitarray(object):
             self._bytes[byteindex] &= ~bitmask
 
     def toggle(self, index: int) -> None:
+        """toggles the given bit in the array"""
         byteindex, bitmask = self.__getindexandmask(index)
         self._bytes[byteindex] ^= bitmask
 
     def save(self, data: bytearray, start: int = 0) -> None:
+        """
+        Stores the state of the bitarray in a bytearray; if
+        the start parameter is given, uses that as an offset
+        to store the state.
+        """
         if start + len(self._bytes) > len(data):
             raise IndexError()
         for i in range(len(self._bytes)):
             data[start + i] = self._bytes[i]
 
     def load(self, data: bytearray, start: int = 0) -> None:
+        """
+        Retrieves the state of the bitarray from a bytearray; if
+        the start parameter is given, uses that as an offset
+        to read the state.
+        """
         if start + len(self._bytes) > len(data):
             raise IndexError()
         for i in range(len(self._bytes)):
