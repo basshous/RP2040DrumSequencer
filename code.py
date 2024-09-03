@@ -171,6 +171,7 @@ def save_state() -> None:
     microcontroller.nvm[0:length] = bytes
 
 def load_state() -> None:
+    global bpm, steps_millis, sequence
     header = nvm_header.unpack_from(microcontroller.nvm[0:nvm_header.size])
     if header[0] != magic_number or header[1] == 0 or header[2] == 0 or header[3] == 0:
         return
@@ -183,7 +184,6 @@ def load_state() -> None:
         index += seq.bytelen()
 
     # TODO: This steps_millis calculation should be in a function (or a class)
-    global bpm, steps_millis
     bpm = header[3]
     beat_time = 60/bpm  # time length of a single beat
     beat_millis = beat_time * 1000
