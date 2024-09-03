@@ -5,7 +5,6 @@ class bitarray(object):
             bytecount = (data-1) // 8 + 1
             self._bytes = bytearray(bytecount)
             self._bitscount = data
-            pass
         else:
             self.__init__(len(data))
 
