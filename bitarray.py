@@ -94,13 +94,17 @@ class bitarray(object):
         byteindex, bitmask = self.__getindexandmask(index)
         self._bytes[byteindex] ^= bitmask
 
+    def bytelen(self) -> int:
+        """gives the number of bytes needed to store the bitarray"""
+        return len(self._bytes)
+
     def save(self, data: bytearray, start: int = 0) -> None:
         """
         Stores the state of the bitarray in a bytearray; if
         the start parameter is given, uses that as an offset
         to store the state.
         """
-        if start + len(self._bytes) > len(data):
+        if start + self.bytelen() > len(data):
             raise IndexError()
         for i in range(len(self._bytes)):
             data[start + i] = self._bytes[i]
@@ -111,7 +115,7 @@ class bitarray(object):
         the start parameter is given, uses that as an offset
         to read the state.
         """
-        if start + len(self._bytes) > len(data):
+        if start + self.bytelen() > len(data):
             raise IndexError()
         for i in range(len(self._bytes)):
             self._bytes[i] = data[start + i]
