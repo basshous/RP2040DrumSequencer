@@ -38,6 +38,11 @@ def set_bpm(newbpm: int):
     beat_millis = beat_time * 1000
     steps_millis = beat_millis / steps_per_beat
 
+def set_drum_index(index: int):
+    global drum_index,curr_drum
+    drum_index = index % len(drums)
+    curr_drum = drums[drum_index]
+
 # define I2C
 i2c = board.STEMMA_I2C()
 
@@ -47,7 +52,6 @@ steps_per_beat = 4  # subdivide beats down to to 16th notes
 set_bpm(120)
 
 step_counter = 0  # goes from 0 to length of sequence - 1
-curr_drum = 0
 playing = False
 
 # Setup button
@@ -134,7 +138,7 @@ def edit_mode_toggle():
     if edit_mode == 0:
         display.print(bpm)
     elif edit_mode == 1:
-        display.print(drums[curr_drum].name)
+        display.print(curr_drum.name)
 
 def print_sequence():
     print("drums = [ ")
@@ -180,7 +184,7 @@ def save_state() -> None:
     microcontroller.nvm[0:length] = bytes
 
 def load_state() -> None:
-    global bpm, steps_millis
+    global num_steps, bpm, steps_millis
     header = nvm_header.unpack_from(microcontroller.nvm[0:nvm_header.size])
     if header[0] != magic_number or header[1] == 0 or header[2] == 0:
         return
@@ -196,9 +200,12 @@ def load_state() -> None:
 # try to load the state (no-op if NVM not valid)
 load_state()
 
+# set the current drum
+set_drum_index(0)
+
 # set the leds
 for j in range(num_steps):
-    light_steps(j, drums[curr_drum].sequence[j])
+    light_steps(j, curr_drum.sequence[j])
 
 display = segments.Seg14x4(i2c, address=(0x71))
 display.brightness = 0.3
@@ -248,7 +255,7 @@ while True:
             for drum in drums:
                 if drum.sequence[step_counter]:  # if there's a 1 at the step for the seq, play it
                     play_drum(drums.note)
-            light_steps(step_counter, drums[curr_drum].sequence[step_counter])  # return led to step value
+            light_steps(step_counter, curr_drum.sequence[step_counter])  # return led to step value
             step_counter = (step_counter + 1) % num_steps
             encoder_pos = -encoder.position  # only check encoder while playing between steps
             knobbutton.update()
@@ -265,8 +272,8 @@ while True:
     if switch:
         if switch.pressed:
             i = switch.key_number
-            drums[curr_drum].sequence.toggle(i) # toggle step
-            light_steps(i, drums[curr_drum].sequence[i])  # toggle light
+            curr_drum.sequence.toggle(i) # toggle step
+            light_steps(i, curr_drum.sequence[i])  # toggle light
 
     if encoder_pos != last_encoder_pos:
         encoder_delta = encoder_pos - last_encoder_pos
@@ -277,11 +284,11 @@ while True:
             display.fill(0)
             display.print(bpm)
         if edit_mode == 1:
-            curr_drum = (curr_drum + encoder_delta) % len(drums)
+            set_drum_index(drum_index + encoder_delta)
             # quickly set the step leds
             for i in range(num_steps):
-                light_steps(i, drums[curr_drum].sequence[i])
-            display.print(drums[curr_drum].name)
+                light_steps(i, curr_drum.sequence[i])
+            display.print(curr_drum.name)
         last_encoder_pos = encoder_pos
 
  # suppresions:
