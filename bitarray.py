@@ -76,8 +76,6 @@ class bitarray(object):
         byteindex, bitmask = self.__getindexandmask(index)
         return self._bytes[byteindex] & bitmask != 0
 
-    # this is the function to set the value of
-    # self[index]
     def __setitem__(self, index: int, value: bool) -> None:
         """ supports the self[index] syntax to set a bit
 
