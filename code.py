@@ -42,6 +42,9 @@ def set_drum_index(index: int):
     global drum_index,curr_drum
     drum_index = index % len(drums)
     curr_drum = drums[drum_index]
+    # set the leds
+    for j in range(num_steps):
+        light_steps(j, curr_drum.sequence[j])
 
 # define I2C
 i2c = board.STEMMA_I2C()
@@ -203,10 +206,6 @@ load_state()
 # set the current drum
 set_drum_index(0)
 
-# set the leds
-for j in range(num_steps):
-    light_steps(j, curr_drum.sequence[j])
-
 display = segments.Seg14x4(i2c, address=(0x71))
 display.brightness = 0.3
 display.fill(0)
@@ -285,9 +284,6 @@ while True:
             display.print(bpm)
         if edit_mode == 1:
             set_drum_index(drum_index + encoder_delta)
-            # quickly set the step leds
-            for i in range(num_steps):
-                light_steps(i, curr_drum.sequence[i])
             display.print(curr_drum.name)
         last_encoder_pos = encoder_pos
 
