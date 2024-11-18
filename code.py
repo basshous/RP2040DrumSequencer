@@ -13,12 +13,12 @@ from adafruit_ticks import ticks_ms, ticks_diff, ticks_add
 import board
 from digitalio import DigitalInOut, Pull
 import keypad
-import adafruit_aw9523
 import usb_midi
 from adafruit_seesaw import seesaw, rotaryio, digitalio
 from adafruit_debouncer import Debouncer
 from adafruit_ht16k33 import segments
 from bitarray import bitarray
+from TLC5916 import TLC5916
 import struct
 import microcontroller
 
@@ -38,18 +38,10 @@ def set_bpm(newbpm: int):
     beat_millis = beat_time * 1000
     steps_millis = beat_millis / steps_per_beat
 
-def set_drum_index(index: int):
-    global drum_index,curr_drum
-    drum_index = index % len(drums)
-    curr_drum = drums[drum_index]
-    # set the leds
-    for j in range(num_steps):
-        light_steps(j, curr_drum.sequence[j])
-
 # define I2C
 i2c = board.STEMMA_I2C()
 
-num_steps = 16  # number of steps/switches
+num_steps = 4  # number of steps/switches per row
 steps_per_beat = 4  # subdivide beats down to to 16th notes
 # Beat timing assumes 4/4 time signature, e.g. 4 beats per measure, 1/4 note gets the beat
 set_bpm(120)
@@ -64,31 +56,24 @@ start_button = Debouncer(start_button_in)
 
 
 # Setup switches
-switch_pins = (
-                board.TX, board.RX, board.D2, board.D3,
-                board.D4, board.D5, board.D6, board.D7,
-                board.D8, board.D9, board.D10, board.MOSI,
-                board.MISO, board.SCK, board.A0, board.A1
-)
-switches = keypad.Keys(switch_pins, value_when_pressed=False, pull=True)
+switches = keypad.ShiftRegisterKeys(
+    data               = (board.GP15,),
+    latch              = board.GP16,
+    clock              = board.GP17,
+    key_count          = (16,),
+    value_when_pressed = True,
+    value_to_latch     = True,
+    )
+
 
 # Setup LEDs
-leds = adafruit_aw9523.AW9523(i2c, address=0x5B)  # both jumperes soldered on board
-for led in range(num_steps):  # turn them off
-    leds.set_constant_current(led, 0)
-leds.LED_modes = 0xFFFF  # constant current mode
-leds.directions = 0xFFFF  # output
+leds = TLC5916(
+    oe_pin = board.GP13,
+    sdi_pin = board.GP12,
+    clk_pin = board.GP11,
+    le_pin = board.GP10,
+    n = 2)
 
-# Values for LED brightness 0-255
-offled = 0
-dimled = 2
-midled = 20
-highled = 150
-
-for led in range(num_steps):  # dramatic boot up light sequence
-    leds.set_constant_current(led, dimled)
-    time.sleep(0.05)
-time.sleep(0.5)
 #
 # STEMMA QT Rotary encoder setup
 rotary_seesaw = seesaw.Seesaw(i2c, addr=0x36)  # default address is 0x36
@@ -104,17 +89,10 @@ midi = usb_midi.ports[1]
 
 # default starting sequence
 drums = [
-    drum("Bass", 36, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 1, 0,  0, 0, 0, 0 ])),
-    drum("Snar", 38, bitarray([ 0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ])),
-    drum("LTom", 41, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0 ])),
-    drum("MTom", 43, bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 1, 0 ])),
-    drum("HTom", 45, bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 1 ])),
-    drum("Clav", 37, bitarray([ 0, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ])),
-    drum("Clap", 39, bitarray([ 0, 0, 0, 1,  0, 0, 0, 0,  0, 0, 0, 0,  1, 1, 1, 0 ])),
-    drum("Cowb", 56, bitarray([ 0, 0, 0, 0,  0, 1, 0, 1,  1, 0, 1, 0,  0, 0, 0, 0 ])),
-    drum("Cymb", 49, bitarray([ 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0 ])),
-    drum("OHat", 46, bitarray([ 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0 ])),
-    drum("CHat", 42, bitarray([ 0, 0, 0, 0,  0, 1, 1, 1,  0, 1, 1, 1,  0, 0, 1, 0 ])),
+    drum("Bass", 36, bitarray([ 1, 0, 0, 0 ])),
+    drum("Snar", 38, bitarray([ 0, 0, 0, 0 ])),
+    drum("LTom", 41, bitarray([ 1, 0, 0, 0 ])),
+    drum("MTom", 43, bitarray([ 0, 0, 0, 0 ])),
 ]
 
 def play_drum(note):
@@ -123,14 +101,10 @@ def play_drum(note):
     midi.write(midi_msg_on)
     midi.write(midi_msg_off)
 
-def light_steps(step, state):
-    if state:
-        leds.set_constant_current(step, midled)
-    else:
-        leds.set_constant_current(step, offled)
-
-def light_beat(step):
-    leds.set_constant_current(step, highled)
+def light_steps(drum, step, state):
+    # pylint: disable=global-statement
+    global leds, num_steps
+    leds[drum * num_steps + step] = state
 
 def edit_mode_toggle():
     # pylint: disable=global-statement
@@ -141,7 +115,7 @@ def edit_mode_toggle():
     if edit_mode == 0:
         display.print(bpm)
     elif edit_mode == 1:
-        display.print(curr_drum.name)
+        display.print("Edit")
 
 def print_sequence():
     print("drums = [ ")
@@ -203,9 +177,6 @@ def load_state() -> None:
 # try to load the state (no-op if NVM not valid)
 load_state()
 
-# set the current drum
-set_drum_index(0)
-
 display = segments.Seg14x4(i2c, address=(0x71))
 display.brightness = 0.3
 display.fill(0)
@@ -231,7 +202,13 @@ display.marquee("BPM", 0.05, loop=False)
 time.sleep(0.75)
 display.marquee(str(bpm), 0.1, loop=False)
 
-
+# light up initial LEDs
+for drum_index in range(len(drums)):
+    drum = drums[drum_index]
+    for step_index in range(num_steps):
+        light_steps(drum_index, step_index, drum.sequence[step_index])
+leds.write()
+last_step = ticks_ms()
 while True:
     start_button.update()
     if start_button.fell:  # pushed encoder button plays/stops transport
@@ -250,11 +227,11 @@ while True:
             late_time = ticks_diff(int(diff), int(steps_millis))
             last_step = ticks_add(now, - late_time//2)
 
-            light_beat(step_counter)  # brighten current step
+            # TODO: how to display the current step? Separate LED?
             for drum in drums:
                 if drum.sequence[step_counter]:  # if there's a 1 at the step for the seq, play it
-                    play_drum(drums.note)
-            light_steps(step_counter, curr_drum.sequence[step_counter])  # return led to step value
+                    play_drum(drum.note)
+            # TODO: how to display the current step? Separate LED?
             step_counter = (step_counter + 1) % num_steps
             encoder_pos = -encoder.position  # only check encoder while playing between steps
             knobbutton.update()
@@ -271,8 +248,12 @@ while True:
     if switch:
         if switch.pressed:
             i = switch.key_number
-            curr_drum.sequence.toggle(i) # toggle step
-            light_steps(i, curr_drum.sequence[i])  # toggle light
+            drum_index = i // num_steps
+            step_index = i % num_steps
+            drum = drums[drum_index]
+            drum.sequence.toggle(step_index) # toggle step
+            light_steps(drum_index, step_index, drum.sequence[step_index])  # toggle light
+            leds.write()
 
     if encoder_pos != last_encoder_pos:
         encoder_delta = encoder_pos - last_encoder_pos
@@ -282,9 +263,6 @@ while True:
             set_bpm(newbpm)
             display.fill(0)
             display.print(bpm)
-        if edit_mode == 1:
-            set_drum_index(drum_index + encoder_delta)
-            display.print(curr_drum.name)
         last_encoder_pos = encoder_pos
 
  # suppresions:
