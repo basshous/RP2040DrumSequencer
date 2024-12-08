@@ -104,7 +104,10 @@ def play_drum(note):
 def light_steps(drum, step, state):
     # pylint: disable=global-statement
     global leds, num_steps
-    leds[drum * num_steps + step] = state
+    remap = [4, 5, 6, 7, 0, 1, 2, 3]
+    new_drum = 4 - drum
+    new_step = remap[step]
+    leds[new_drum * num_steps + new_step] = state
 
 def edit_mode_toggle():
     # pylint: disable=global-statement
