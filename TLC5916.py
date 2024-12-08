@@ -42,3 +42,44 @@ class TLC5916:
             self.clk.value = True
             self.clk.value = False
         self.latch()
+
+    def set_special_mode(self, val):
+        self.clk.value = False
+        self.oe.value  = True
+        self.le.value  = False
+        self.clk.value = True
+        time.sleep(0.00001)
+        self.clk.value = False
+        self.oe.value  = False
+        self.le.value  = False
+        self.clk.value = True
+        time.sleep(0.00001)
+        self.clk.value = False
+        self.oe.value  = True
+        self.le.value  = False
+        self.clk.value = True
+        time.sleep(0.00001)
+        self.clk.value = False
+        self.oe.value  = True
+        self.le.value  = val
+        self.clk.value = True
+        time.sleep(0.00001)
+        self.clk.value = False
+        self.oe.value  = True
+        self.le.value  = False
+        self.clk.value = True
+        time.sleep(0.00001)
+        self.oe.value  = False
+
+    def write_config(self, value):
+        self.set_special_mode(True)
+        for j in range(len(self.ba)):
+            for i in range(8):
+                if value & (1 << i) != 0:
+                    self.sdi.value = True
+                else:
+                    self.sdi.value = False
+                self.clk.value = True
+                self.clk.value = False
+        self.latch()
+        self.set_special_mode(False)

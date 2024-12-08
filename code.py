@@ -74,6 +74,9 @@ leds = TLC5916(
     le_pin = board.GP10,
     n = 2)
 
+# 0 = most dim
+leds.write_config(0)
+
 #
 # STEMMA QT Rotary encoder setup
 rotary_seesaw = seesaw.Seesaw(i2c, addr=0x36)  # default address is 0x36
