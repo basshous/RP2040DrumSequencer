@@ -108,6 +108,10 @@ def light_steps(drum, step, state):
     new_drum = 4 - drum
     new_step = remap[step]
     leds[new_drum * num_steps + new_step] = state
+    if state:
+        print(f'drum{drum} step{step}: on')
+    else:
+        print(f'drum{drum} step{step}: off')
 
 def edit_mode_toggle():
     # pylint: disable=global-statement
