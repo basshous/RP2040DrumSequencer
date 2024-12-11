@@ -22,12 +22,37 @@ from TLC5916 import TLC5916
 import struct
 import microcontroller
 
+print("test")
+
+class stepper:
+    def __init__(self, num_steps):
+        self.current_step = 0
+        self.first_step = 0
+        self.last_step = num_steps - 1
+        self.stepping_forward = True
+
+    def advance_step(self):
+        if self.stepping_forward:
+            if self.current_step < self.last_step:
+                self.current_step = self.current_step + 1
+            else:
+                self.current_step = self.first_step
+        else:
+            if self.current_step > self.first_step:
+                self.current_step = self.current_step - 1
+            else:
+                self.current_step = self.last_step
+        return self.current_step
+
+    def reverse(self):
+        self.stepping_forward = not self.stepping_forward
+
 class drum:
     def __init__(self, name, note, sequence):
         self.name = name
         self.note = note
         self.sequence = sequence
-    
+
     def __repr__(self):
         return f'drum({repr(self.name)},{repr(self.note)},{repr(self.sequence)})'
 
@@ -41,12 +66,13 @@ def set_bpm(newbpm: int):
 # define I2C
 i2c = board.STEMMA_I2C()
 
-num_steps = 4  # number of steps/switches per row
+num_steps = 8  # number of steps/switches per row
 steps_per_beat = 4  # subdivide beats down to to 16th notes
-# Beat timing assumes 4/4 time signature, e.g. 4 beats per measure, 1/4 note gets the beat
+# Beat timing assumes 4/4 time signature, 
+# e.g. 4 beats per measure, 1/4 note gets the beat
 set_bpm(120)
 
-step_counter = 0  # goes from 0 to length of sequence - 1
+stepper = stepper(num_steps)
 playing = False
 
 # Setup button
@@ -54,27 +80,33 @@ start_button_in = DigitalInOut(board.A2)
 start_button_in.pull = Pull.UP
 start_button = Debouncer(start_button_in)
 
+# Reverse button
+reverse_button_in = DigitalInOut(board.A1)
+reverse_button_in.pull = Pull.UP
+reverse_button = Debouncer(reverse_button_in)
 
 # Setup switches
 # Input shift register
 switches = keypad.ShiftRegisterKeys(
-    data               = (board.GP15,),
-    latch              = board.GP16,
-    clock              = board.GP17,
-    key_count          = (16,),
+    data = board.SCK,
+    latch = board.MOSI,
+    clock = board.MISO,
+    key_count = 40,
     value_when_pressed = True,
-    value_to_latch     = True,
+    value_to_latch = True,
     )
 
 
 # Setup LEDs
 # Output shift register
 leds = TLC5916(
-    oe_pin = board.GP13,
-    sdi_pin = board.GP12,
-    clk_pin = board.GP11,
-    le_pin = board.GP10,
-    n = 2)
+    oe_pin = board.D5,
+    sdi_pin = board.D3,
+    clk_pin = board.D2,
+    le_pin = board.D4,
+    n = 5)
+
+leds.write_config(0)
 #
 # STEMMA QT Rotary encoder setup
 rotary_seesaw = seesaw.Seesaw(i2c, addr=0x36)  # default address is 0x36
@@ -90,10 +122,11 @@ midi = usb_midi.ports[1]
 
 # default starting sequence
 drums = [
-    drum("Bass", 36, bitarray([ 1, 0, 0, 0 ])),
-    drum("Snar", 38, bitarray([ 0, 0, 0, 0 ])),
-    drum("LTom", 41, bitarray([ 1, 0, 0, 0 ])),
-    drum("MTom", 43, bitarray([ 0, 0, 0, 0 ])),
+    drum("Bass", 36, bitarray([ 0, 0, 0, 0, 0, 0, 0, 0 ])),
+    drum("Snar", 38, bitarray([ 0, 0, 0, 0, 0, 0, 0, 0 ])),
+    drum("LTom", 41, bitarray([ 0, 0, 0, 0, 0, 0, 0, 0 ])),
+    drum("MTom", 44, bitarray([ 0, 0, 0, 0, 0, 0, 0, 0 ])),
+    drum("HTom", 56, bitarray([ 0, 0, 0, 0, 0, 0, 0, 0 ])),
 ]
 
 def play_drum(note):
@@ -114,16 +147,16 @@ def light_steps(drum, step, state):
     else:
         print(f'drum{drum} step{step}: off')
 
-def edit_mode_toggle():
+#def edit_mode_toggle():
     # pylint: disable=global-statement
-    global edit_mode
+    #global edit_mode
     # pylint: disable=used-before-assignment
-    edit_mode = (edit_mode + 1) % num_modes
-    display.fill(0)
-    if edit_mode == 0:
-        display.print(bpm)
-    elif edit_mode == 1:
-        display.print("Edit")
+    #edit_mode = (edit_mode + 1) % num_modes
+    #display.fill(0)
+    #if edit_mode == 0:
+    #   display.print(bpm)
+    #elif edit_mode == 1:
+    #    #display.print("Edit")
 
 def print_sequence():
     print("drums = [ ")
@@ -224,9 +257,13 @@ while True:
             print_sequence()
             save_state()
         playing = not playing
-        step_counter = 0
+        stepper.current_step = 0
         last_step = int(ticks_add(ticks_ms(), -steps_millis))
         print("*** Play:", playing)
+
+    reverse_button.update()
+    if reverse_button.fell:
+        stepper.reverse()
 
     if playing:
         now = ticks_ms()
@@ -237,25 +274,27 @@ while True:
 
             # TODO: how to display the current step? Separate LED?
             for drum in drums:
-                if drum.sequence[step_counter]:  # if there's a 1 at the step for the seq, play it
+                if drum.sequence[stepper.current_step]:  # if there's a 1 at the step for the seq, play it
                     play_drum(drum.note)
             # TODO: how to display the current step? Separate LED?
-            step_counter = (step_counter + 1) % num_steps
+            stepper.advance_step()
             encoder_pos = -encoder.position  # only check encoder while playing between steps
-            knobbutton.update()
-            if knobbutton.fell:
-                edit_mode_toggle()
+            #knobbutton.update()
+            #if knobbutton.fell:
+            #	print("toggling edit")
+            #    edit_mode_toggle()
     else:  # check the encoder all the time when not playing
         encoder_pos = -encoder.position
-        knobbutton.update()
-        if knobbutton.fell:  # change edit mode, refresh display
-            edit_mode_toggle()
+        #ƒknobbutton.update()
+        #if knobbutton.fell:  # change edit mode, refresh display
+        #    edit_mode_toggle()
 
     # switches add or remove steps
     switch = switches.events.get()
     if switch:
         if switch.pressed:
             i = switch.key_number
+            print(f"key pressed: {i}")
             drum_index = i // num_steps
             step_index = i % num_steps
             drum = drums[drum_index]
