@@ -147,17 +147,6 @@ def light_steps(drum, step, state):
     else:
         print(f'drum{drum} step{step}: off')
 
-#def edit_mode_toggle():
-    # pylint: disable=global-statement
-    #global edit_mode
-    # pylint: disable=used-before-assignment
-    #edit_mode = (edit_mode + 1) % num_modes
-    #display.fill(0)
-    #if edit_mode == 0:
-    #   display.print(bpm)
-    #elif edit_mode == 1:
-    #    #display.print("Edit")
-
 def print_sequence():
     print("drums = [ ")
     for drum in drums:
@@ -225,9 +214,6 @@ display.show()
 display.print(bpm)
 display.show()
 
-edit_mode = 0  # 0=bpm, 1=voices
-num_modes = 2
-
 print("Drum Trigger 2040")
 
 
@@ -279,15 +265,8 @@ while True:
             # TODO: how to display the current step? Separate LED?
             stepper.advance_step()
             encoder_pos = -encoder.position  # only check encoder while playing between steps
-            #knobbutton.update()
-            #if knobbutton.fell:
-            #	print("toggling edit")
-            #    edit_mode_toggle()
     else:  # check the encoder all the time when not playing
         encoder_pos = -encoder.position
-        #ƒknobbutton.update()
-        #if knobbutton.fell:  # change edit mode, refresh display
-        #    edit_mode_toggle()
 
     # switches add or remove steps
     switch = switches.events.get()
@@ -304,12 +283,11 @@ while True:
 
     if encoder_pos != last_encoder_pos:
         encoder_delta = encoder_pos - last_encoder_pos
-        if edit_mode == 0:
-            newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
-            newbpm = min(max(newbpm, 10), 400)
-            set_bpm(newbpm)
-            display.fill(0)
-            display.print(bpm)
+        newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
+        newbpm = min(max(newbpm, 10), 400)
+        set_bpm(newbpm)
+        display.fill(0)
+        display.print(bpm)
         last_encoder_pos = encoder_pos
 
  # suppresions:
