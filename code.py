@@ -56,6 +56,7 @@ start_button = Debouncer(start_button_in)
 
 
 # Setup switches
+# Input shift register
 switches = keypad.ShiftRegisterKeys(
     data               = (board.GP15,),
     latch              = board.GP16,
@@ -67,16 +68,13 @@ switches = keypad.ShiftRegisterKeys(
 
 
 # Setup LEDs
+# Output shift register
 leds = TLC5916(
     oe_pin = board.GP13,
     sdi_pin = board.GP12,
     clk_pin = board.GP11,
     le_pin = board.GP10,
     n = 2)
-
-# 0 = most dim
-leds.write_config(0)
-
 #
 # STEMMA QT Rotary encoder setup
 rotary_seesaw = seesaw.Seesaw(i2c, addr=0x36)  # default address is 0x36
@@ -187,7 +185,7 @@ def load_state() -> None:
 # try to load the state (no-op if NVM not valid)
 load_state()
 
-display = segments.Seg14x4(i2c, address=(0x71))
+display = segments.Seg14x4(i2c, address=(0x70))
 display.brightness = 0.3
 display.fill(0)
 display.show()
