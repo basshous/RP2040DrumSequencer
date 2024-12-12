@@ -30,6 +30,7 @@ class stepper:
         self.first_step = 0
         self.last_step = num_steps - 1
         self.stepping_forward = True
+        self.num_steps = num_steps
 
     def advance_step(self):
         if self.stepping_forward:
@@ -49,6 +50,27 @@ class stepper:
 
     def reset(self):
         self.current_step = self.first_step
+
+    def adjust_range_start(self, adjustment):
+        # keep adjustment in the range where self.first_step >= 0 and
+        # self.last_step < self.num_steps
+        adjustment = max(adjustment, -self.first_step)
+        adjustment = min(adjustment, self.last_step - 1 - self.first_step)
+        self.first_step += adjustment
+        self.last_step += adjustment
+        # TODO: self.current_step might be out of range; leave that
+        # as is; advance_step() will move it into the right range
+        # eventually. We might want to revisit this.
+
+    def adjust_range_length(self, adjustment):
+        # keep adjustment in the range where self.first_step <= self.last_step and
+        # self.last_step < self.num_steps
+        adjustment = max(adjustment, self.first_step - self.last_step)
+        adjustment = min(adjustment, self.last_step - 1 - self.first_step)
+        self.last_step += adjustment
+         # TODO: self.current_step might be out of range; leave that
+        # as is; advance_step() will move it into the right range
+        # eventually. We might want to revisit this.
 
 class drum:
     def __init__(self, name, note, sequence):
