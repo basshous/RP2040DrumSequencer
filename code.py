@@ -47,6 +47,9 @@ class stepper:
     def reverse(self):
         self.stepping_forward = not self.stepping_forward
 
+    def reset(self):
+        self.current_step = self.first_step
+
 class drum:
     def __init__(self, name, note, sequence):
         self.name = name
@@ -243,7 +246,7 @@ while True:
             print_sequence()
             save_state()
         playing = not playing
-        stepper.current_step = 0
+        stepper.reset()
         last_step = int(ticks_add(ticks_ms(), -steps_millis))
         print("*** Play:", playing)
 
