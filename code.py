@@ -308,8 +308,12 @@ while True:
             # TODO: how to display the current step? Separate LED?
             stepper.advance_step()
             tempo_encoder_pos = -tempo_encoder.position  # only check encoder while playing between steps
+            pattern_length_encoder_pos = -pattern_length_encoder.position
+            step_shift_encoder_pos = -step_shift_encoder.position
     else:  # check the encoder all the time when not playing
         tempo_encoder_pos = -tempo_encoder.position
+        pattern_length_encoder_pos = -pattern_length_encoder.position
+        step_shift_encoder_pos = -step_shift_encoder.position
 
     # switches add or remove steps
     switch = switches.events.get()
