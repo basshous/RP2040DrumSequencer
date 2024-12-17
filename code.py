@@ -150,6 +150,8 @@ rotary_seesaw2 = seesaw.Seesaw(i2c, addr=0x49)  # default address is 0x36
    
 # Pattern Length Encoder
 pattern_length_encoder = rotaryio.IncrementalEncoder(rotary_seesaw2, 1)
+last_pattern_length_encoder_pos = 0
+pattern_length_encoder_pos = -pattern_length_encoder.position
     if pattern_length_encoder_pos != last_pattern_length_encoder_pos:
         pattern_length_encoder_delta = pattern_length_encoder_pos - last_pattern_length_encoder_pos
         adjust_range_length
@@ -158,6 +160,8 @@ pattern_length_encoder = rotaryio.IncrementalEncoder(rotary_seesaw2, 1)
 
 # Step Shift Encoder
 step_shift_encoder = rotaryio.IncrementalEncoder(rotary_seesaw2, 3)
+last_step_shift_encoder_pos = 0
+step_shift_encoder_pos = -step_shift_encoder.position
     if step_shift_encoder_pos != last_step_shift_encoder_pos:
         step_shift_encoder_delta = step_shift_encoder_pos - last_step_shift_encoder_pos
         adjust_range_start
