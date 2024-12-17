@@ -30,6 +30,7 @@ class stepper:
         self.first_step = 0
         self.last_step = num_steps - 1
         self.stepping_forward = True
+        self.num_steps = num_steps
 
     def advance_step(self):
         if self.stepping_forward:
@@ -46,6 +47,30 @@ class stepper:
 
     def reverse(self):
         self.stepping_forward = not self.stepping_forward
+
+    def reset(self):
+        self.current_step = self.first_step
+
+    def adjust_range_start(self, adjustment):
+        # keep adjustment in the range where self.first_step >= 0 and
+        # self.last_step < self.num_steps
+        adjustment = max(adjustment, -self.first_step)
+        adjustment = min(adjustment, self.last_step - 1 - self.first_step)
+        self.first_step += adjustment
+        self.last_step += adjustment
+        # TODO: self.current_step might be out of range; leave that
+        # as is; advance_step() will move it into the right range
+        # eventually. We might want to revisit this.
+
+    def adjust_range_length(self, adjustment):
+        # keep adjustment in the range where self.first_step <= self.last_step and
+        # self.last_step < self.num_steps
+        adjustment = max(adjustment, self.first_step - self.last_step)
+        adjustment = min(adjustment, self.last_step - 1 - self.first_step)
+        self.last_step += adjustment
+         # TODO: self.current_step might be out of range; leave that
+        # as is; advance_step() will move it into the right range
+        # eventually. We might want to revisit this.
 
 class drum:
     def __init__(self, name, note, sequence):
@@ -147,17 +172,6 @@ def light_steps(drum, step, state):
     else:
         print(f'drum{drum} step{step}: off')
 
-#def edit_mode_toggle():
-    # pylint: disable=global-statement
-    #global edit_mode
-    # pylint: disable=used-before-assignment
-    #edit_mode = (edit_mode + 1) % num_modes
-    #display.fill(0)
-    #if edit_mode == 0:
-    #   display.print(bpm)
-    #elif edit_mode == 1:
-    #    #display.print("Edit")
-
 def print_sequence():
     print("drums = [ ")
     for drum in drums:
@@ -225,9 +239,6 @@ display.show()
 display.print(bpm)
 display.show()
 
-edit_mode = 0  # 0=bpm, 1=voices
-num_modes = 2
-
 print("Drum Trigger 2040")
 
 
@@ -257,7 +268,7 @@ while True:
             print_sequence()
             save_state()
         playing = not playing
-        stepper.current_step = 0
+        stepper.reset()
         last_step = int(ticks_add(ticks_ms(), -steps_millis))
         print("*** Play:", playing)
 
@@ -279,15 +290,8 @@ while True:
             # TODO: how to display the current step? Separate LED?
             stepper.advance_step()
             encoder_pos = -encoder.position  # only check encoder while playing between steps
-            #knobbutton.update()
-            #if knobbutton.fell:
-            #	print("toggling edit")
-            #    edit_mode_toggle()
     else:  # check the encoder all the time when not playing
         encoder_pos = -encoder.position
-        #ƒknobbutton.update()
-        #if knobbutton.fell:  # change edit mode, refresh display
-        #    edit_mode_toggle()
 
     # switches add or remove steps
     switch = switches.events.get()
@@ -304,12 +308,11 @@ while True:
 
     if encoder_pos != last_encoder_pos:
         encoder_delta = encoder_pos - last_encoder_pos
-        if edit_mode == 0:
-            newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
-            newbpm = min(max(newbpm, 10), 400)
-            set_bpm(newbpm)
-            display.fill(0)
-            display.print(bpm)
+        newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
+        newbpm = min(max(newbpm, 10), 400)
+        set_bpm(newbpm)
+        display.fill(0)
+        display.print(bpm)
         last_encoder_pos = encoder_pos
 
  # suppresions:
