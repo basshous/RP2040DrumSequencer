@@ -144,8 +144,6 @@ tempo_encoder_pos = -tempo_encoder.position
 
 
 # setup adafruit quad encoder
-encoders = [adafruit_seesaw.rotaryio.IncrementalEncoder(seesaw, n) for n in range(4)]
-
 rotary_seesaw2 = seesaw.Seesaw(i2c, addr=0x49)  # default address is 0x36
    
 # Pattern Length Encoder
