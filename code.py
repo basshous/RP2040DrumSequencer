@@ -339,12 +339,12 @@ while True:
 
     if pattern_length_encoder_pos != last_pattern_length_encoder_pos:
         pattern_length_encoder_delta = pattern_length_encoder_pos - last_pattern_length_encoder_pos
-        adjust_range_length
+        stepper.adjust_range_length(pattern_length_encoder_delta)
         last_pattern_length_encoder_pos = pattern_length_encoder_pos
 
     if step_shift_encoder_pos != last_step_shift_encoder_pos:
         step_shift_encoder_delta = step_shift_encoder_pos - last_step_shift_encoder_pos
-        adjust_range_start
+        stepper.adjust_range_start(step_shift_encoder_delta)
         last_step_shift_encoder_pos = step_shift_encoder_pos
 
 
