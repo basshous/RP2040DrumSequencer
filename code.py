@@ -135,12 +135,34 @@ leds.write_config(0)
 #
 # STEMMA QT Rotary encoder setup
 rotary_seesaw = seesaw.Seesaw(i2c, addr=0x36)  # default address is 0x36
-encoder = rotaryio.IncrementalEncoder(rotary_seesaw)
-last_encoder_pos = 0
+encoder1 = rotaryio.IncrementalEncoder(rotary_seesaw)
+last_encoder1_pos = 0
 rotary_seesaw.pin_mode(24, rotary_seesaw.INPUT_PULLUP)  # setup the button pin
 knobbutton_in = digitalio.DigitalIO(rotary_seesaw, 24)  # use seesaw digitalio
 knobbutton = Debouncer(knobbutton_in)  # create debouncer object for button
-encoder_pos = -encoder.position
+encoder1_pos = -encoder1.position
+
+
+# setup adafruit quad encoder
+encoders = [adafruit_seesaw.rotaryio.IncrementalEncoder(seesaw, n) for n in range(4)]
+
+rotary_seesaw2 = seesaw.Seesaw(i2c, addr=0x49)  # default address is 0x36
+   
+# Pattern Length Encoder
+encoder2 = rotaryio.IncrementalEncoder(rotary_seesaw2, 1)
+    if encoder2_pos != last_encoder2_pos:
+        encoder2_delta = encoder2_pos - last_encoder2_pos
+        adjust_range_length
+        last_encoder2_pos = encoder2_pos
+
+
+# Step Shift Encoder
+encoder3 = rotaryio.IncrementalEncoder(rotary_seesaw2, 3)
+    if encoder3_pos != last_encoder3_pos:
+        encoder3_delta = encoder3_pos - last_encoder3_pos
+        adjust_range_start
+        last_encoder3_pos = encoder3_pos
+
 
 # MIDI setup
 midi = usb_midi.ports[1]
@@ -289,9 +311,9 @@ while True:
                     play_drum(drum.note)
             # TODO: how to display the current step? Separate LED?
             stepper.advance_step()
-            encoder_pos = -encoder.position  # only check encoder while playing between steps
+            encoder1_pos = -encoder1.position  # only check encoder while playing between steps
     else:  # check the encoder all the time when not playing
-        encoder_pos = -encoder.position
+        encoder1_pos = -encoder1.position
 
     # switches add or remove steps
     switch = switches.events.get()
@@ -306,14 +328,17 @@ while True:
             light_steps(drum_index, step_index, drum.sequence[step_index])  # toggle light
             leds.write()
 
-    if encoder_pos != last_encoder_pos:
-        encoder_delta = encoder_pos - last_encoder_pos
+    if encoder1_pos != last_encoder1_pos:
+        encoder1_delta = encoder1_pos - last_encoder1_pos
         newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
         newbpm = min(max(newbpm, 10), 400)
         set_bpm(newbpm)
         display.fill(0)
         display.print(bpm)
-        last_encoder_pos = encoder_pos
+        last_encoder1_pos = encoder1_pos
+
+
+
 
  # suppresions:
  # type: ignore
