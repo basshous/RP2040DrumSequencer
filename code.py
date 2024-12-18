@@ -55,7 +55,7 @@ class stepper:
         # keep adjustment in the range where self.first_step >= 0 and
         # self.last_step < self.num_steps
         adjustment = max(adjustment, -self.first_step)
-        adjustment = min(adjustment, self.last_step - 1 - self.first_step)
+        adjustment = min(adjustment, self.num_steps - 1 - self.last_step)
         self.first_step += adjustment
         self.last_step += adjustment
         # TODO: self.current_step might be out of range; leave that
@@ -66,7 +66,7 @@ class stepper:
         # keep adjustment in the range where self.first_step <= self.last_step and
         # self.last_step < self.num_steps
         adjustment = max(adjustment, self.first_step - self.last_step)
-        adjustment = min(adjustment, self.last_step - 1 - self.first_step)
+        adjustment = min(adjustment, self.num_steps - 1 - self.last_step)
         self.last_step += adjustment
          # TODO: self.current_step might be out of range; leave that
         # as is; advance_step() will move it into the right range
@@ -135,12 +135,28 @@ leds.write_config(0)
 #
 # STEMMA QT Rotary encoder setup
 rotary_seesaw = seesaw.Seesaw(i2c, addr=0x36)  # default address is 0x36
-encoder = rotaryio.IncrementalEncoder(rotary_seesaw)
-last_encoder_pos = 0
+tempo_encoder = rotaryio.IncrementalEncoder(rotary_seesaw)
+last_tempo_encoder_pos = 0
 rotary_seesaw.pin_mode(24, rotary_seesaw.INPUT_PULLUP)  # setup the button pin
 knobbutton_in = digitalio.DigitalIO(rotary_seesaw, 24)  # use seesaw digitalio
 knobbutton = Debouncer(knobbutton_in)  # create debouncer object for button
-encoder_pos = -encoder.position
+tempo_encoder_pos = -tempo_encoder.position
+
+
+# setup adafruit quad encoder
+rotary_seesaw2 = seesaw.Seesaw(i2c, addr=0x49)  # default address is 0x36
+   
+# Pattern Length Encoder
+pattern_length_encoder = rotaryio.IncrementalEncoder(rotary_seesaw2, 1)
+last_pattern_length_encoder_pos = 0
+pattern_length_encoder_pos = -pattern_length_encoder.position
+
+
+# Step Shift Encoder
+step_shift_encoder = rotaryio.IncrementalEncoder(rotary_seesaw2, 3)
+last_step_shift_encoder_pos = 0
+step_shift_encoder_pos = -step_shift_encoder.position
+
 
 # MIDI setup
 midi = usb_midi.ports[1]
@@ -289,9 +305,13 @@ while True:
                     play_drum(drum.note)
             # TODO: how to display the current step? Separate LED?
             stepper.advance_step()
-            encoder_pos = -encoder.position  # only check encoder while playing between steps
+            tempo_encoder_pos = -tempo_encoder.position  # only check encoder while playing between steps
+            pattern_length_encoder_pos = -pattern_length_encoder.position
+            step_shift_encoder_pos = -step_shift_encoder.position
     else:  # check the encoder all the time when not playing
-        encoder_pos = -encoder.position
+        tempo_encoder_pos = -tempo_encoder.position
+        pattern_length_encoder_pos = -pattern_length_encoder.position
+        step_shift_encoder_pos = -step_shift_encoder.position
 
     # switches add or remove steps
     switch = switches.events.get()
@@ -306,14 +326,26 @@ while True:
             light_steps(drum_index, step_index, drum.sequence[step_index])  # toggle light
             leds.write()
 
-    if encoder_pos != last_encoder_pos:
-        encoder_delta = encoder_pos - last_encoder_pos
+    if tempo_encoder_pos != last_tempo_encoder_pos:
+        tempo_encoder_delta = tempo_encoder_pos - last_tempo_encoder_pos
         newbpm = bpm + encoder_delta  # or (encoder_delta * 5)
         newbpm = min(max(newbpm, 10), 400)
         set_bpm(newbpm)
         display.fill(0)
         display.print(bpm)
-        last_encoder_pos = encoder_pos
+        last_tempo_encoder_pos = tempo_encoder_pos
+
+    if pattern_length_encoder_pos != last_pattern_length_encoder_pos:
+        pattern_length_encoder_delta = pattern_length_encoder_pos - last_pattern_length_encoder_pos
+        stepper.adjust_range_length(pattern_length_encoder_delta)
+        last_pattern_length_encoder_pos = pattern_length_encoder_pos
+
+    if step_shift_encoder_pos != last_step_shift_encoder_pos:
+        step_shift_encoder_delta = step_shift_encoder_pos - last_step_shift_encoder_pos
+        stepper.adjust_range_start(step_shift_encoder_delta)
+        last_step_shift_encoder_pos = step_shift_encoder_pos
+
+
 
  # suppresions:
  # type: ignore
